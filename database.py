@@ -15,6 +15,10 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
+    # Speed & Concurrency Pragmas
+    cursor.execute("PRAGMA journal_mode=WAL;")
+    cursor.execute("PRAGMA synchronous=NORMAL;")
+    
     # Recordings Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recordings (
@@ -50,6 +54,9 @@ def init_db():
             value TEXT
         )
     """)
+    
+    # Indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_qna_rec_id ON qna_history(recording_id);")
     
     conn.commit()
     conn.close()

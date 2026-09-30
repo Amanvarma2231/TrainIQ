@@ -41,6 +41,7 @@ def merge_video_audio(video_file: str, audio_file: str, output_file: str) -> boo
     cmd = [
         ffmpeg_exe,
         "-y",
+        "-threads", "0",
         "-i", video_file,
     ]
     
@@ -70,6 +71,7 @@ def extract_audio_wav(input_video: str, output_wav: str) -> bool:
     cmd = [
         ffmpeg_exe,
         "-y",
+        "-threads", "0",
         "-i", input_video,
         "-vn",
         "-acodec", "pcm_s16le",
