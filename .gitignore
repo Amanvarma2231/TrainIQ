@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# TrainIQ runtime data (do not commit actual recordings or exports)
+recordings/*.mp4
+recordings/*.avi
+recordings/*.wav
+recordings/_tmp_*
+exports/*.pdf
+exports/*.pptx
+
+# Database (contains personal session data – do not commit)
+trainiq.db
+
+# Temp / scratch files
+validate_main.py
+*.log
+*.tmp
+
+# API keys / secrets (never commit)
+.env
+secrets.json
+config_local.py

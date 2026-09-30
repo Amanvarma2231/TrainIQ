@@ -1,0 +1,11 @@
+flet>=1.0.0
+opencv-python>=4.8.0
+mss>=9.0.0
+sounddevice>=0.4.6
+numpy>=1.24.0
+imageio>=2.30.0
+imageio-ffmpeg>=0.4.8
+SpeechRecognition>=3.10.0
+google-generativeai>=0.6.0
+reportlab>=4.0.0
+python-pptx>=0.6.21

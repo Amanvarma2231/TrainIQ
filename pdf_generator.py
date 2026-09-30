@@ -1,0 +1,243 @@
+import os
+import time
+from typing import Dict, Any, List
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, KeepTogether
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from utils import format_seconds, format_file_size
+
+class PDFReportGenerator:
+    def __init__(self, output_dir: str = "exports"):
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def generate_pdf(self, recording: Dict[str, Any], output_filename: str = None) -> str:
+        """Generates a styled PDF report for a recording session."""
+        title = recording.get("title", "Training Program")
+        rec_id = recording.get("id", 1)
+        duration = recording.get("duration", 0)
+        file_size = recording.get("file_size", 0)
+        recorded_at = recording.get("recorded_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+        transcript = recording.get("transcript", "")
+        summary = recording.get("summary", {})
+
+        if not output_filename:
+            safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).rstrip()
+            safe_title = safe_title.replace(' ', '_')
+            output_filename = f"TrainIQ_Report_{rec_id}_{safe_title}.pdf"
+
+        filepath = os.path.join(self.output_dir, output_filename)
+
+        doc = SimpleDocTemplate(
+            filepath,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=40,
+            bottomMargin=40
+        )
+
+        styles = getSampleStyleSheet()
+
+        # Custom Palette
+        NAVY = colors.HexColor("#0F172A")
+        INDIGO = colors.HexColor("#4F46E5")
+        BLUE_BG = colors.HexColor("#F1F5F9")
+        TEXT_DARK = colors.HexColor("#1E293B")
+        MUTED = colors.HexColor("#64748B")
+        ACCENT_EMERALD = colors.HexColor("#10B981")
+
+        # Custom Paragraph Styles
+        header_style = ParagraphStyle(
+            'HeaderTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=22,
+            leading=26,
+            textColor=NAVY
+        )
+
+        subtitle_style = ParagraphStyle(
+            'HeaderSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            leading=14,
+            textColor=MUTED
+        )
+
+        section_heading = ParagraphStyle(
+            'SectionHeading',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            leading=18,
+            textColor=INDIGO,
+            spaceBefore=14,
+            spaceAfter=6
+        )
+
+        body_style = ParagraphStyle(
+            'BodyDark',
+            parent=styles['BodyText'],
+            fontName='Helvetica',
+            fontSize=10,
+            leading=14,
+            textColor=TEXT_DARK,
+            alignment=TA_LEFT
+        )
+
+        exec_style = ParagraphStyle(
+            'ExecBoxText',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=10.5,
+            leading=15,
+            textColor=NAVY
+        )
+
+        bullet_style = ParagraphStyle(
+            'BulletText',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            leading=14,
+            textColor=TEXT_DARK,
+            leftIndent=15,
+            firstLineIndent=-10
+        )
+
+        ts_style = ParagraphStyle(
+            'TSStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            leading=12,
+            textColor=INDIGO
+        )
+
+        story = []
+
+        # --- Corporate Header ---
+        header_data = [
+            [
+                Paragraph("<b>TrainIQ</b> <font color='#4F46E5'>AI Reports</font>", header_style),
+                Paragraph(f"<b>Session ID:</b> #{rec_id}<br/><b>Date:</b> {recorded_at}", ParagraphStyle('RightMeta', parent=subtitle_style, alignment=TA_RIGHT))
+            ]
+        ]
+        header_table = Table(header_data, colWidths=[340, 200])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(header_table)
+        story.append(HRFlowable(width="100%", thickness=2, color=INDIGO, spaceAfter=15, spaceBefore=5))
+
+        # --- Document Title & Meta ---
+        story.append(Paragraph(f"Training Session Summary: {title}", header_style))
+        story.append(Spacer(1, 4))
+        
+        meta_str = f"<b>Duration:</b> {format_seconds(duration)} &nbsp;&nbsp;|&nbsp;&nbsp; <b>File Size:</b> {format_file_size(file_size)} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Generated By:</b> TrainIQ Enterprise Platform"
+        story.append(Paragraph(meta_str, subtitle_style))
+        story.append(Spacer(1, 14))
+
+        # --- Executive Summary Box ---
+        exec_summary_text = summary.get("executive_summary", "No summary available for this session.")
+        box_data = [[
+            Paragraph(f"<b>EXECUTIVE SUMMARY</b><br/><br/>{exec_summary_text}", exec_style)
+        ]]
+        box_table = Table(box_data, colWidths=[540])
+        box_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), BLUE_BG),
+            ('BOX', (0,0), (-1,-1), 1, INDIGO),
+            ('TOPPADDING', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 12),
+            ('RIGHTPADDING', (0,0), (-1,-1), 12),
+        ]))
+        story.append(box_table)
+        story.append(Spacer(1, 15))
+
+        # --- Key Agenda Topics Table ---
+        topics = summary.get("topics", [])
+        if topics:
+            story.append(Paragraph("1. Agenda Topics & Timestamp Breakdown", section_heading))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=MUTED, spaceAfter=8, spaceBefore=2))
+            
+            table_data = [
+                [Paragraph("<b>Timestamp</b>", ts_style), Paragraph("<b>Topic / Section</b>", ts_style), Paragraph("<b>Summary Details</b>", ts_style)]
+            ]
+            for t in topics:
+                ts = t.get("timestamp", "[00:00]")
+                top_name = t.get("topic", "Topic")
+                details = t.get("details", "")
+                table_data.append([
+                    Paragraph(f"<b>{ts}</b>", ts_style),
+                    Paragraph(f"<b>{top_name}</b>", body_style),
+                    Paragraph(details, body_style)
+                ])
+                
+            topic_table = Table(table_data, colWidths=[70, 160, 310])
+            topic_table.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#E2E8F0")),
+                ('TEXTCOLOR', (0,0), (-1,0), NAVY),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")),
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('TOPPADDING', (0,0), (-1,-1), 6),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ]))
+            story.append(topic_table)
+            story.append(Spacer(1, 15))
+
+        # --- Key Takeaways ---
+        takeaways = summary.get("key_takeaways", [])
+        if takeaways:
+            story.append(Paragraph("2. Key Learning Takeaways", section_heading))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=MUTED, spaceAfter=8, spaceBefore=2))
+            for tk in takeaways:
+                story.append(Paragraph(f"• &nbsp; {tk}", bullet_style))
+                story.append(Spacer(1, 4))
+            story.append(Spacer(1, 10))
+
+        # --- Action Items ---
+        actions = summary.get("action_items", [])
+        if actions:
+            story.append(Paragraph("3. Action Items & Follow-up Tasks", section_heading))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=MUTED, spaceAfter=8, spaceBefore=2))
+            for act in actions:
+                story.append(Paragraph(f"[  ] &nbsp; <b>TASK:</b> {act}", bullet_style))
+                story.append(Spacer(1, 4))
+            story.append(Spacer(1, 10))
+
+        # --- Q&A Highlights ---
+        qna = summary.get("qna_highlights", [])
+        if qna:
+            story.append(Paragraph("4. Key Questions & Discussion Highlights", section_heading))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=MUTED, spaceAfter=8, spaceBefore=2))
+            for q in qna:
+                q_text = q.get("question", "")
+                a_text = q.get("answer", "")
+                story.append(Paragraph(f"<b>Q: {q_text}</b>", ParagraphStyle('QStyle', parent=body_style, fontName='Helvetica-Bold', textColor=NAVY)))
+                story.append(Spacer(1, 2))
+                story.append(Paragraph(f"<b>A:</b> {a_text}", ParagraphStyle('AStyle', parent=body_style, textColor=TEXT_DARK, leftIndent=10)))
+                story.append(Spacer(1, 8))
+
+        # --- Full Transcript Appendix ---
+        if transcript:
+            story.append(Spacer(1, 10))
+            story.append(Paragraph("5. Timestamped Session Transcript", section_heading))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=MUTED, spaceAfter=8, spaceBefore=2))
+            
+            transcript_lines = transcript.split("\n")
+            # Limit transcript to first 500 lines for PDF conciseness if super long
+            for tline in transcript_lines[:300]:
+                if tline.strip():
+                    story.append(Paragraph(tline.strip(), ParagraphStyle('TrStyle', parent=body_style, fontSize=8.5, leading=12, fontName='Courier')))
+                    story.append(Spacer(1, 2))
+
+        doc.build(story)
+        return filepath
