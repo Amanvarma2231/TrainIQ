@@ -329,6 +329,13 @@ class TrainIQApp:
                                     alignment=ft.MainAxisAlignment.CENTER,
                                     spacing=12,
                                 ),
+                                ft.Container(height=12),
+                                ft.OutlinedButton(
+                                    "🚀 Load Sample Session (Instant Web Demo)",
+                                    icon=ft.Icons.ROCKET_LAUNCH,
+                                    style=ft.ButtonStyle(color=ft.Colors.INDIGO_300),
+                                    on_click=self._on_load_sample_session,
+                                ),
                                 ft.Container(height=16),
                                 self.prg_processing,
                                 self.lbl_processing,
@@ -504,6 +511,62 @@ class TrainIQApp:
                 break
             time.sleep(0.5)
 
+    def _on_load_sample_session(self, e):
+        title = "Python & Gemini AI Development Masterclass"
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings", "Sample_TrainIQ_Session.mp4")
+        duration = 1845.0
+        file_size = 45200000
+
+        sample_transcript = """[00:00] Presenter: Welcome everyone to the Python and Google Gemini AI Development Masterclass! Today we are exploring building enterprise desktop applications.
+[02:15] Topic 1: Setting up Python 3.10 and Flet 1.0 GUI Framework. Flet allows us to build Flutter-powered cross-platform desktop and web applications in pure Python.
+[07:30] Topic 2: Screen and Microphone Recording with OpenCV, MSS, and sounddevice. We capture video frames at 20fps and sync audio streams into an MP4 container.
+[14:10] Topic 3: Multimodal Audio Transcription with Google Gemini 1.5 Flash. Gemini processes raw audio and returns timestamped transcripts automatically.
+[21:45] Topic 4: Automated PDF and PowerPoint Presentation Generation. We convert structured summary JSON into professional ReportLab PDFs and python-pptx 16:9 widescreen slide decks.
+[28:10] Topic 5: Q&A and Interactive Assistant integration with SQLite persistent storage."""
+
+        sample_summary = {
+            "executive_summary": "The Python & Gemini AI Development Masterclass provided end-to-end guidance on building enterprise desktop and web applications. Topics included Flet 1.0 GUI design, OpenCV audio/video screen capture, Gemini 1.5 Flash multimodal transcription, automated PDF/PPTX report export, and SQLite persistence.",
+            "topics": [
+                {"timestamp": "[00:00]", "topic": "Introduction & Masterclass Overview", "details": "Welcomed participants and outlined the architecture of AI-powered Python applications."},
+                {"timestamp": "[02:15]", "topic": "Flet 1.0 Cross-Platform UI Framework", "details": "Demonstrated reactive UI layouts, NavigationRail, and dark mode theme configuration."},
+                {"timestamp": "[07:30]", "topic": "Screen & Audio Capture Engine", "details": "Explained MSS screen frame grabbing, sounddevice audio stream buffers, and FFmpeg synchronization."},
+                {"timestamp": "[14:10]", "topic": "Google Gemini AI Multimodal Processing", "details": "Detailed direct audio payload processing for high-accuracy timestamped transcriptions."},
+                {"timestamp": "[21:45]", "topic": "Automated PDF & PowerPoint Generation", "details": "Showcased ReportLab executive PDF builds and python-pptx widescreen presentation generation."}
+            ],
+            "key_takeaways": [
+                "Flet 1.0 enables rapid Flutter-based cross-platform UI development directly in Python.",
+                "Google Gemini 1.5 Flash offers superior multimodal transcription and semantic summarization.",
+                "ReportLab and python-pptx automate corporate reporting with zero manual formatting."
+            ],
+            "action_items": [
+                "Deploy TrainIQ to Render cloud for web accessibility.",
+                "Add Gemini API Key in Settings to enable live multimodal reasoning."
+            ],
+            "qna_highlights": [
+                {
+                    "question": "What framework is used for the desktop GUI?",
+                    "answer": "Flet 1.0 (built on Flutter engine) is used for reactive, modern UI rendering."
+                }
+            ]
+        }
+
+        rec_id = db.save_recording(
+            title=title,
+            file_path=file_path,
+            duration=duration,
+            file_size=file_size,
+            transcript=sample_transcript,
+            summary=sample_summary
+        )
+
+        db.save_chat_message(rec_id, "System", f"Loaded sample training session: '{title}'")
+        db.save_chat_message(rec_id, "User", "What were the main topics covered in this masterclass?")
+        db.save_chat_message(rec_id, "TrainIQ Assistant", "The masterclass covered 5 key topics:\n1. Flet 1.0 UI Framework [02:15]\n2. Screen & Audio Recording Engine [07:30]\n3. Gemini 1.5 Flash Multimodal Transcription [14:10]\n4. Automated PDF & PPTX Generation [21:45]\n5. Q&A and SQLite Persistence [28:10]")
+
+        self.selected_recording_id = rec_id
+        self.toast(f"✅ Loaded Sample Session #{rec_id}!", ft.Colors.GREEN_700)
+        self._switch_to(2)
+
 
     # =========================================================================
     #  VIEW 2 – LIBRARY
@@ -521,10 +584,18 @@ class TrainIQApp:
                 ft.Row([ft.Text("No recordings yet.",
                                 size=18, color=ft.Colors.GREY_600)],
                         justify_content=ft.MainAxisAlignment.CENTER),
-                ft.Row([ft.Text("Record your first training session "
-                                "in the Recorder tab.",
+                ft.Row([ft.Text("Record your first training session or click below to load a demo session.",
                                 size=13, color=ft.Colors.GREY_700)],
                         justify_content=ft.MainAxisAlignment.CENTER),
+                ft.Container(height=16),
+                ft.Row([
+                    ft.OutlinedButton(
+                        "🚀 Load Sample Session (Instant Web Demo)",
+                        icon=ft.Icons.ROCKET_LAUNCH,
+                        style=ft.ButtonStyle(color=ft.Colors.INDIGO_300),
+                        on_click=self._on_load_sample_session,
+                    )
+                ], justify_content=ft.MainAxisAlignment.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
         rows = []
