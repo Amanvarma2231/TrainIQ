@@ -11,9 +11,21 @@ import time
 import wave
 import threading
 import numpy as np
-import cv2
-import mss
-import sounddevice as sd
+
+try:
+    import cv2
+except Exception as _exc:
+    cv2 = None
+
+try:
+    import mss
+except Exception as _exc:
+    mss = None
+
+try:
+    import sounddevice as sd
+except Exception as _exc:
+    sd = None
 
 from utils import merge_video_audio
 
@@ -53,9 +65,11 @@ class ScreenAudioRecorder:
     def get_audio_input_devices(self):
         """Returns list of (index, name) tuples for available audio inputs."""
         devices = []
+        if sd is None:
+            return devices
         try:
             for idx, dev in enumerate(sd.query_devices()):
-                if dev["max_input_channels"] > 0:
+                if dev.get("max_input_channels", 0) > 0:
                     devices.append((idx, dev["name"]))
         except Exception:
             pass
@@ -140,39 +154,48 @@ class ScreenAudioRecorder:
     # Internal worker threads
     # ------------------------------------------------------------------
     def _record_screen(self):
-        with mss.mss() as sct:
-            monitor = dict(sct.monitors[1])  # primary monitor
+        if mss is None or cv2 is None:
+            print("[recorder] Screen recording not available in headless mode")
+            return
+        try:
+            with mss.mss() as sct:
+                monitor = dict(sct.monitors[1])  # primary monitor
 
-            # Ensure even dimensions for the codec
-            w = monitor["width"]  - (monitor["width"]  % 2)
-            h = monitor["height"] - (monitor["height"] % 2)
-            monitor["width"]  = w
-            monitor["height"] = h
+                # Ensure even dimensions for the codec
+                w = monitor["width"]  - (monitor["width"]  % 2)
+                h = monitor["height"] - (monitor["height"] % 2)
+                monitor["width"]  = w
+                monitor["height"] = h
 
-            fourcc = cv2.VideoWriter_fourcc(*"XVID")
-            out = cv2.VideoWriter(
-                self._temp_video, fourcc, float(self.fps), (w, h)
-            )
+                fourcc = cv2.VideoWriter_fourcc(*"XVID")
+                out = cv2.VideoWriter(
+                    self._temp_video, fourcc, float(self.fps), (w, h)
+                )
 
-            frame_time = 1.0 / self.fps
+                frame_time = 1.0 / self.fps
 
-            while self.is_recording:
-                t0 = time.time()
-                if not self.is_paused:
-                    try:
-                        img = np.array(sct.grab(monitor))
-                        frame = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-                        out.write(frame)
-                    except Exception as exc:
-                        print(f"[recorder] screen frame error: {exc}")
+                while self.is_recording:
+                    t0 = time.time()
+                    if not self.is_paused:
+                        try:
+                            img = np.array(sct.grab(monitor))
+                            frame = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                            out.write(frame)
+                        except Exception as exc:
+                            print(f"[recorder] screen frame error: {exc}")
 
-                sleep_dur = frame_time - (time.time() - t0)
-                if sleep_dur > 0:
-                    time.sleep(sleep_dur)
+                    sleep_dur = frame_time - (time.time() - t0)
+                    if sleep_dur > 0:
+                        time.sleep(sleep_dur)
 
-            out.release()
+                out.release()
+        except Exception as exc:
+            print(f"[recorder] screen recording error: {exc}")
 
     def _record_audio(self, device_index: int | None = None):
+        if sd is None:
+            print("[recorder] Audio recording not available in headless mode")
+            return
         frames = []
 
         def _callback(indata, frame_count, time_info, status):

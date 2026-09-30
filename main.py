@@ -1114,7 +1114,15 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    if hasattr(ft, "app"):
-        ft.app(target=main)
+    port_env = os.environ.get("PORT")
+    if port_env:
+        port = int(port_env)
+        if hasattr(ft, "app"):
+            ft.app(target=main, port=port, view=ft.AppView.WEB_BROWSER)
+        else:
+            ft.run(main, port=port)
     else:
-        ft.run(main)
+        if hasattr(ft, "app"):
+            ft.app(target=main)
+        else:
+            ft.run(main)
